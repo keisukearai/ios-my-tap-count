@@ -88,4 +88,4 @@ xcrun simctl launch booted com.keisukearai.MyTapCount -seedSampleData -screen de
 - [ ] AppIcon を用意する
 - [ ] App Store Connect にアプリ登録（SKU は `mytapcount`）
 - [ ] サポート URL・プライバシー URL（他プロジェクトは `https://kotoragk.com/<sku>` 形式）
-- [ ] git リポジトリの作成と初期コミット（現状このディレクトリは git 管理外）
+- [x] git リポジトリの作成と初期コミット（リモート: `git@github.com:keisukearai/ios-my-tap-count.git` / main ブランチ）
