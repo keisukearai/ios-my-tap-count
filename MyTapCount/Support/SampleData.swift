@@ -39,6 +39,20 @@ enum SampleData {
                 }
             }
         }
+        // 週送りを試せるよう、間を空けて古い週にも「水」の記録を置く。
+        // 直近7日ぶんだけだと ◀ が常に無効で、空週スキップの確認ができない。
+        if let water = try? context.fetch(
+            FetchDescriptor<CounterItem>(predicate: #Predicate { $0.name == "水" })
+        ).first {
+            for dayOffset in [-16, -17, -18, -30, -31] {
+                let day = Calendar.current.date(byAdding: .day, value: dayOffset, to: today) ?? today
+                for tap in 0..<4 {
+                    let time = day.addingTimeInterval(TimeInterval((9 + tap * 3) * 3600))
+                    context.insert(CountEntry(timestamp: time, amount: 1, counter: water))
+                }
+            }
+        }
+
         try? context.save()
     }
 }
