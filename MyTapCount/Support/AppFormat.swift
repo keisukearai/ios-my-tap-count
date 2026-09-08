@@ -21,6 +21,25 @@ enum AppFormat {
         return day.formatted(formatter)
     }
 
+    /// 週の見出し。ja は「9/3 – 9/9」、en は「Sep 3 – Sep 9」。
+    /// end は期間の終端（含まない）なので、表示は1日戻した日付にする。
+    static func weekRange(start: Date, end: Date, _ localizer: Localizer) -> String {
+        let last = Calendar.current.date(byAdding: .day, value: -1, to: end) ?? end
+        return "\(shortDay(start, localizer)) – \(shortDay(last, localizer))"
+    }
+
+    private static func shortDay(_ date: Date, _ localizer: Localizer) -> String {
+        if localizer.language == .ja {
+            let parts = Calendar.current.dateComponents([.month, .day], from: date)
+            return "\(parts.month ?? 0)/\(parts.day ?? 0)"
+        }
+        // 年を落とした月日。Date.FormatStyle の .year(.omitted) は iOS 18 以降なので使わない。
+        let formatter = DateFormatter()
+        formatter.locale = localizer.locale
+        formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        return formatter.string(from: date)
+    }
+
     /// 棒グラフの曜日ラベル。
     static func weekdayInitial(_ day: Date, _ localizer: Localizer) -> String {
         let formatter = DateFormatter()

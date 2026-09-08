@@ -37,16 +37,89 @@ enum CountingService {
         }
     }
 
-    /// 直近7日分の日別合計を古い順に返す（末尾が今日）。
-    static func lastWeekTotals(for counter: CounterItem, now: Date = .now) -> [(date: Date, total: Int)] {
-        let today = startOfDay(now)
+    // MARK: - 週単位の履歴
+
+    /// 詳細画面が一度に見せる1週間。offset 0 が「今日を含む直近7日」で、
+    /// 1 増えるごとに7日ずつ古くなる。カレンダー週にしないのは、今週が常に
+    /// 途中で切れた棒グラフになって「最近どれくらい押しているか」が読めなくなるため。
+    /// end は含まない。
+    static func weekWindow(offset: Int, now: Date = .now) -> (start: Date, end: Date) {
         let calendar = Calendar.current
-        let days: [Date] = (0..<7).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }
-        let entries = counter.entries ?? []
-        return days.map { day in
-            let next = calendar.date(byAdding: .day, value: 1, to: day) ?? day
-            let total = entries.filter { $0.timestamp >= day && $0.timestamp < next }.reduce(0) { $0 + $1.amount }
-            return (day, total)
+        let today = startOfDay(now)
+        let start = calendar.date(byAdding: .day, value: -(6 + offset * 7), to: today) ?? today
+        let end = calendar.date(byAdding: .day, value: 7, to: start) ?? today
+        return (start, end)
+    }
+
+    /// その日が offset いくつの週に入るか。今日を含む週が 0。
+    static func weekOffset(containing date: Date, now: Date = .now) -> Int {
+        let days = Calendar.current.dateComponents(
+            [.day], from: startOfDay(date), to: startOfDay(now)
+        ).day ?? 0
+        return max(0, days / 7)
+    }
+
+    /// 指定した期間の記録だけを取る。
+    /// `counter.entries` をたどると全期間が読み込まれるので、履歴表示では必ずこちらを使う。
+    static func entries(
+        counterID: UUID, in context: ModelContext, from start: Date, to end: Date
+    ) throws -> [CountEntry] {
+        let descriptor = FetchDescriptor<CountEntry>(
+            predicate: #Predicate { $0.timestamp >= start && $0.timestamp < end },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        // 期間で絞ったあとに項目で選り分ける。関係に述語を掛けるより素直で、
+        // 7日分なら他項目の記録を含めても十分小さい。
+        return try context.fetch(descriptor).filter { $0.counter?.id == counterID }
+    }
+
+    /// 期間内の記録を日別に合計して古い順に返す。記録が無い日は 0 で埋める。
+    static func dayTotals(
+        _ entries: [CountEntry], window: (start: Date, end: Date)
+    ) -> [(date: Date, total: Int)] {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: window.start, to: window.end).day ?? 7
+        let buckets = entries.reduce(into: [Date: Int]()) { totals, entry in
+            totals[startOfDay(entry.timestamp), default: 0] += entry.amount
+        }
+        return (0..<days).compactMap { index in
+            guard let day = calendar.date(byAdding: .day, value: index, to: window.start) else { return nil }
+            return (day, buckets[day] ?? 0)
+        }
+    }
+
+    /// 記録のある隣の週の offset。無ければ nil（＝そちら側の端）。
+    /// 記録が1件も無い週は飛ばす。空の週を延々と送らせないため。
+    static func adjacentWeekOffset(
+        counterID: UUID, in context: ModelContext, from offset: Int, older: Bool, now: Date = .now
+    ) throws -> Int? {
+        if !older && offset == 0 { return nil }
+        let window = weekWindow(offset: offset, now: now)
+        var descriptor: FetchDescriptor<CountEntry>
+        if older {
+            let bound = window.start
+            descriptor = FetchDescriptor<CountEntry>(
+                predicate: #Predicate { $0.timestamp < bound },
+                sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            )
+        } else {
+            let bound = window.end
+            descriptor = FetchDescriptor<CountEntry>(
+                predicate: #Predicate { $0.timestamp >= bound },
+                sortBy: [SortDescriptor(\.timestamp, order: .forward)]
+            )
+        }
+        // 他項目の記録が手前に並びうるので、この項目の1件目が出るまで読む。
+        descriptor.fetchLimit = 200
+        var scanned = 0
+        while true {
+            let page = try context.fetch(descriptor)
+            if let hit = page.first(where: { $0.counter?.id == counterID }) {
+                return weekOffset(containing: hit.timestamp, now: now)
+            }
+            if page.count < descriptor.fetchLimit! { return nil }
+            scanned += page.count
+            descriptor.fetchOffset = scanned
         }
     }
 

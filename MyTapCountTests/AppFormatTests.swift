@@ -74,3 +74,38 @@ struct WeekdayLabelTests {
         #expect(Set(labels).count == 7)
     }
 }
+
+@Suite("週の見出し")
+struct WeekRangeTests {
+
+    @Test("日本語は M/D – M/D")
+    func japaneseRange() {
+        let localizer = TestSupport.localizer(.ja)
+        let window = CountingService.weekWindow(offset: 0, now: TestSupport.date(2026, 9, 8, 12, 0))
+        #expect(AppFormat.weekRange(start: window.start, end: window.end, localizer) == "9/2 – 9/8")
+    }
+
+    @Test("月をまたいでも両端の月を出す")
+    func acrossMonths() {
+        let localizer = TestSupport.localizer(.ja)
+        let window = CountingService.weekWindow(offset: 1, now: TestSupport.date(2026, 9, 8, 12, 0))
+        #expect(AppFormat.weekRange(start: window.start, end: window.end, localizer) == "8/26 – 9/1")
+    }
+
+    @Test("英語は年を出さない")
+    func englishOmitsYear() {
+        let localizer = TestSupport.localizer(.en)
+        let window = CountingService.weekWindow(offset: 0, now: TestSupport.date(2026, 9, 8, 12, 0))
+        let text = AppFormat.weekRange(start: window.start, end: window.end, localizer)
+        #expect(text.contains("–"))
+        #expect(!text.contains("2026"))
+    }
+
+    @Test("終端は期間の最終日で、翌日にはならない")
+    func endIsInclusiveDay() {
+        let localizer = TestSupport.localizer(.ja)
+        let window = CountingService.weekWindow(offset: 0, now: TestSupport.date(2026, 9, 8, 12, 0))
+        #expect(window.end == TestSupport.date(2026, 9, 9))
+        #expect(AppFormat.weekRange(start: window.start, end: window.end, localizer).hasSuffix("9/8"))
+    }
+}

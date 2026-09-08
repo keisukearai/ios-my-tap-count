@@ -163,17 +163,86 @@ struct IncrementTests {
     }
 }
 
-@Suite("直近7日間")
-struct LastWeekTests {
+@Suite("週単位の履歴")
+struct WeekHistoryTests {
     private let store = TestStore()
 
-    @Test("古い順に7日分を返し、末尾が今日になる")
-    func sevenDaysOldestFirst() throws {
-        let context = store.context
-        let now = TestSupport.date(2026, 9, 8, 12, 0)
-        let water = TestSupport.makeCounter(in: context)
+    private let now = TestSupport.date(2026, 9, 8, 12, 0)
 
-        let totals = CountingService.lastWeekTotals(for: water, now: now)
+    // MARK: 週の範囲
+
+    @Test("offset 0 は今日を含む直近7日")
+    func currentWeekWindow() {
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        #expect(window.start == TestSupport.date(2026, 9, 2))
+        #expect(window.end == TestSupport.date(2026, 9, 9))
+    }
+
+    @Test("offset 1 は7日ぶん古い")
+    func previousWeekWindow() {
+        let window = CountingService.weekWindow(offset: 1, now: now)
+        #expect(window.start == TestSupport.date(2026, 8, 26))
+        #expect(window.end == TestSupport.date(2026, 9, 2))
+    }
+
+    @Test("その日がどの週に入るか")
+    func offsetContainingDate() {
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 9, 8), now: now) == 0)
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 9, 2), now: now) == 0)
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 9, 1), now: now) == 1)
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 8, 26), now: now) == 1)
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 8, 25), now: now) == 2)
+    }
+
+    @Test("未来の日付は今週に丸める")
+    func futureDateClampsToCurrentWeek() {
+        #expect(CountingService.weekOffset(containing: TestSupport.date(2026, 9, 20), now: now) == 0)
+    }
+
+    // MARK: 期間を絞った取得
+
+    @Test("期間の外の記録は取らない")
+    func entriesStayInsideWindow() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 1, 23, 59), in: context)   // 範囲の直前
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 2, 0, 0), in: context)     // start は含む
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 23, 59), in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 9, 0, 0), in: context)     // end は含まない
+
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let entries = try CountingService.entries(
+            counterID: water.id, in: context, from: window.start, to: window.end
+        )
+        #expect(entries.count == 2)
+        #expect(entries.map(\.timestamp).sorted() == [
+            TestSupport.date(2026, 9, 2, 0, 0),
+            TestSupport.date(2026, 9, 8, 23, 59),
+        ])
+    }
+
+    @Test("他の項目の記録は混ざらない")
+    func entriesFilterByCounter() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context, name: "水")
+        let pills = TestSupport.makeCounter(in: context, name: "薬", sortOrder: 1)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 5, 9, 0), in: context)
+        TestSupport.addEntry(pills, at: TestSupport.date(2026, 9, 5, 10, 0), in: context)
+
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let entries = try CountingService.entries(
+            counterID: water.id, in: context, from: window.start, to: window.end
+        )
+        #expect(entries.count == 1)
+        #expect(entries.first?.counter?.id == water.id)
+    }
+
+    // MARK: 日別合計
+
+    @Test("古い順に7日分を返し、末尾が今日になる")
+    func sevenDaysOldestFirst() {
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let totals = CountingService.dayTotals([], window: window)
         #expect(totals.count == 7)
         #expect(totals.first?.date == TestSupport.date(2026, 9, 2))
         #expect(totals.last?.date == TestSupport.date(2026, 9, 8))
@@ -182,23 +251,118 @@ struct LastWeekTests {
     @Test("日ごとに合計する")
     func totalsPerDay() throws {
         let context = store.context
-        let now = TestSupport.date(2026, 9, 8, 12, 0)
         let water = TestSupport.makeCounter(in: context)
         TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 6, 8, 0), in: context)
         TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 6, 20, 0), in: context)
         TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)
 
-        let totals = CountingService.lastWeekTotals(for: water, now: now).map(\.total)
-        #expect(totals == [0, 0, 0, 0, 2, 0, 1])
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let entries = try CountingService.entries(
+            counterID: water.id, in: context, from: window.start, to: window.end
+        )
+        #expect(CountingService.dayTotals(entries, window: window).map(\.total) == [0, 0, 0, 0, 2, 0, 1])
     }
 
-    @Test("8日前の記録は含めない")
+    @Test("増分は記録時の amount で足す")
+    func totalsUseRecordedAmount() throws {
+        let context = store.context
+        let pushups = TestSupport.makeCounter(in: context, name: "腕立て", step: 10)
+        TestSupport.addEntry(pushups, at: TestSupport.date(2026, 9, 7, 8, 0), amount: 10, in: context)
+        TestSupport.addEntry(pushups, at: TestSupport.date(2026, 9, 7, 9, 0), amount: 20, in: context)
+
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let entries = try CountingService.entries(
+            counterID: pushups.id, in: context, from: window.start, to: window.end
+        )
+        #expect(CountingService.dayTotals(entries, window: window).map(\.total) == [0, 0, 0, 0, 0, 30, 0])
+    }
+
+    @Test("8日前の記録は今週に含めない")
     func excludesOlderThanSevenDays() throws {
         let context = store.context
-        let now = TestSupport.date(2026, 9, 8, 12, 0)
         let water = TestSupport.makeCounter(in: context)
         TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 1, 12, 0), in: context)
 
-        #expect(CountingService.lastWeekTotals(for: water, now: now).allSatisfy { $0.total == 0 })
+        let window = CountingService.weekWindow(offset: 0, now: now)
+        let entries = try CountingService.entries(
+            counterID: water.id, in: context, from: window.start, to: window.end
+        )
+        #expect(CountingService.dayTotals(entries, window: window).allSatisfy { $0.total == 0 })
+    }
+
+    // MARK: 週送り
+
+    @Test("記録の無い週は飛ばして古い方へ進む")
+    func skipsEmptyWeeksGoingOlder() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)   // offset 0
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 8, 10, 9, 0), in: context)  // offset 4
+
+        let older = try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 0, older: true, now: now
+        )
+        #expect(older == 4)
+    }
+
+    @Test("それ以上古い記録が無ければ nil")
+    func noOlderWeekReturnsNil() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)
+
+        #expect(try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 0, older: true, now: now
+        ) == nil)
+    }
+
+    @Test("古い週から新しい方へ戻れる")
+    func stepsBackToNewerWeek() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)   // offset 0
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 8, 10, 9, 0), in: context)  // offset 4
+
+        let newer = try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 4, older: false, now: now
+        )
+        #expect(newer == 0)
+    }
+
+    @Test("今週では新しい方へは進めない")
+    func noNewerWeekFromCurrent() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)
+
+        #expect(try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 0, older: false, now: now
+        ) == nil)
+    }
+
+    @Test("他の項目の記録では週を送らない")
+    func neighborsIgnoreOtherCounters() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context, name: "水")
+        let pills = TestSupport.makeCounter(in: context, name: "薬", sortOrder: 1)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)
+        TestSupport.addEntry(pills, at: TestSupport.date(2026, 8, 10, 9, 0), in: context)
+
+        #expect(try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 0, older: true, now: now
+        ) == nil)
+    }
+
+    @Test("同じ週に複数の記録があっても週は1つ")
+    func multipleEntriesInSameWeekGiveOneOffset() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 9, 8, 9, 0), in: context)
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 8, 30, 9, 0), in: context)  // offset 1
+        TestSupport.addEntry(water, at: TestSupport.date(2026, 8, 27, 9, 0), in: context)  // offset 1
+
+        #expect(try CountingService.adjacentWeekOffset(
+            counterID: water.id, in: context, from: 0, older: true, now: now
+        ) == 1)
     }
 }
