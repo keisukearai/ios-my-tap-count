@@ -432,13 +432,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Got it"
+            "value": "Close"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "置いてみる"
+            "value": "閉じる"
           }
         }
       }
@@ -466,13 +466,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Widget setup"
+            "value": "Widget setup guide"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設置ガイド"
+            "value": "ウィジェット設置ガイド"
           }
         }
       }
@@ -619,13 +619,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adding the widget"
+            "value": "Widget setup guide"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウィジェットの置き方"
+            "value": "ウィジェット設置ガイド"
           }
         }
       }
@@ -704,13 +704,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add the widget"
+            "value": "Widget setup guide"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウィジェットを置く"
+            "value": "ウィジェット設置ガイド"
           }
         }
       }
