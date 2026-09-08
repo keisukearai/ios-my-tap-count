@@ -81,6 +81,10 @@ xcrun simctl launch booted com.keisukearai.MyTapCount -seedSampleData -screen de
 - App Group の設定漏れは「ウィジェットにデータが出ない」という形でしか現れない。
   `Shared/AppGroup.swift` はコンテナが取れないとき黙ってフォールバックせず落とす（本体だけ動いて拡張が空、という状態を避けるため）
 - SwiftData のストアは App Group コンテナの `MyTapCount.store`。既定の場所だと共有されない
+- **`-screen` 起動引数は初回のみ発火させる。** `RootView` の `.task { openRequestedScreen() }` は
+  `HomeView` に付いているため、詳細などから一覧に戻るたびに走り直す。
+  `didOpenRequestedScreen` のガードが無いと「戻ると追加・編集画面が開き直す」「詳細が再 push される」
+  という形で出る。デバッグ用の起動引数が原因なので、素の不具合と紛らわしい
 
 ## リリース前の TODO
 

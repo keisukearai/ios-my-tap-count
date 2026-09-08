@@ -11,6 +11,11 @@ struct RootView: View {
     @Environment(Localizer.self) private var localizer
     @State private var path: [Route] = []
     @State private var editing: CounterFormView.Subject?
+    #if DEBUG
+    /// 起動引数の画面遷移は初回のみ。一覧に戻るたび `.task` が走り直すため、
+    /// これが無いと戻った瞬間にまた同じ画面が開く。
+    @State private var didOpenRequestedScreen = false
+    #endif
     /// 初回だけ設置ガイドを出す。ウィジェットを置いて初めて価値が出るアプリなので、
     /// 一覧が空のまま放置されるのを防ぐ。
     @AppStorage("hasSeenWidgetGuide", store: AppGroup.defaults) private var hasSeenWidgetGuide = false
@@ -66,6 +71,8 @@ struct RootView: View {
     #if DEBUG
     /// 起動引数で指定された画面まで push する。一覧の先頭を対象にする。
     private func openRequestedScreen() {
+        guard !didOpenRequestedScreen else { return }
+        didOpenRequestedScreen = true
         guard let screen = ScreenshotMode.requestedScreen else { return }
         let context = SharedModelContainer.shared.mainContext
         switch screen {
