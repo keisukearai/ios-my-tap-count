@@ -13,6 +13,9 @@ enum Theme {
     static let subInk = Color(hex: 0x3C3C43, opacity: 0.60)
     static let faintInk = Color(hex: 0x3C3C43, opacity: 0.50)
     static let hairline = Color(hex: 0x3C3C43, opacity: 0.12)
+    /// 一覧の行下端に敷く進捗バーの土台と、1回分の目盛り線。
+    static let progressTrack = Color(hex: 0x3C3C43, opacity: 0.045)
+    static let progressTick = Color(hex: 0x3C3C43, opacity: 0.13)
 
     static let cardRadius: CGFloat = 20
     static let blockRadius: CGFloat = 16

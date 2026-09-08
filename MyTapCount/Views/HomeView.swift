@@ -130,7 +130,7 @@ struct HomeView: View {
             PlusButton(color: counter.color.color) { increment(counter) }
         }
         .padding(.vertical, 6)
-        .listRowBackground(progressBackground(ratio: ratio, tint: counter.color.tint))
+        .listRowBackground(progressBackground(ratio: ratio, target: counter.target, tint: counter.color.tint))
         .contextMenu {
             Button {
                 onEdit(counter.id)
@@ -145,13 +145,27 @@ struct HomeView: View {
         }
     }
 
-    /// 目標がある項目は行の背景に進捗バーを薄く重ねる。
-    private func progressBackground(ratio: Double?, tint: Color) -> some View {
+    /// 目標がある項目は行の下端に進捗バーを敷く。目盛りは1回分の区切りで、
+    /// 目標が大きいときは 24 分割で頭打ちにして線が潰れないようにする。
+    private func progressBackground(ratio: Double?, target: Int?, tint: Color) -> some View {
         GeometryReader { proxy in
-            ZStack(alignment: .leading) {
+            ZStack(alignment: .bottomLeading) {
                 Theme.card
-                if let ratio {
-                    tint.frame(width: proxy.size.width * ratio)
+                if let ratio, let target, target > 0 {
+                    let barHeight = proxy.size.height * 0.15
+                    let segments = min(target, 24)
+                    Rectangle()
+                        .fill(Theme.progressTrack)
+                        .frame(height: barHeight)
+                    Rectangle()
+                        .fill(tint)
+                        .frame(width: proxy.size.width * ratio, height: barHeight)
+                    ForEach(1..<segments, id: \.self) { index in
+                        Rectangle()
+                            .fill(Theme.progressTick)
+                            .frame(width: 1, height: barHeight)
+                            .offset(x: proxy.size.width * Double(index) / Double(segments))
+                    }
                 }
             }
         }
