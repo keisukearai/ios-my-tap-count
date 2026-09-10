@@ -108,12 +108,21 @@ xcrun simctl launch booted com.keisukearai.MyTapCount -seedSampleData -screen de
 MyGeoWarp / task-count-down 等にある `beta` / `submit` / `release` レーンは意図的に持たない。
 
 ```bash
-bundle install
+# Homebrew の Ruby を使う。PATH を通さないとシステム Ruby 2.6 + Bundler 1.17 が拾われ、
+# /Library/Ruby へ書こうとして sudo を要求して失敗する（bundle config set --local も効かない）
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+
+bundle install                                       # vendor/bundle に入る（.bundle/config で設定済み）
 cp fastlane/.env.local.example fastlane/.env.local   # 実値を埋める（他プロジェクトの .env.local から流用）
 bundle exec fastlane ios upload_metadata             # ja / en-US のメタデータを ASC へ
 ```
 
-- `fastlane/.env.local` は **.gitignore 済み**。App Store Connect API キー等が入るのでコミットしない
+- `.bundle/` `vendor/bundle/` `Gemfile.lock` は姉妹プロジェクトに合わせて .gitignore 済み
+- `fastlane/.env.local` は **.gitignore 済み**。App Store Connect API キー等が入るのでコミットしない。
+  中身は `~/workspace/ios/MyNfcTapLog/fastlane/.env.local` から流用した（同一 Apple アカウント）。
+  match は使わないので `MATCH_*` は入れていない
+- URL の規約：プライバシーは `https://kotoragk.com/<sku小文字>/privacy`、サポートは `https://kotoragk.com/<sku小文字>`。
+  **`/privacy` の方しか実在しない**
 - メタデータの実体は `fastlane/metadata/{ja,en-US}/*.txt`。**ASC の画面で直接直さず、このファイルを直して上げ直す**
 - カテゴリは `fastlane/metadata/primary_category.txt` の `UTILITIES`。
   pbxproj の `INFOPLIST_KEY_LSApplicationCategoryType` は主に macOS 向けの値で、審査に効くのは前者
@@ -133,11 +142,12 @@ bundle exec fastlane ios upload_metadata             # ja / en-US のメタデ�
 
 - [ ] 実機（arai13）で small / medium ウィジェットの ＋ 動作を確認する
 - [ ] App Store Connect の「App情報」でカテゴリ・年齢制限（4+）・App プライバシー（データを収集しません）を設定する
-- [ ] `fastlane/.env.local` を作って `bundle exec fastlane ios upload_metadata` を実行する
+- [x] `fastlane/.env.local` を作って `bundle exec fastlane ios upload_metadata` を実行する（2026-09-11 実施・ASC 反映確認済み）
 - [ ] スクリーンショットを撮って ASC に上げる（`-screen` 起動引数と `ScreenshotMode.swift` が使える）
 - [ ] Xcode の Organizer から Archive → App Store Connect へアップロード
-- [ ] サポート URL・プライバシー URL のページを実際に用意する
-      （`fastlane/metadata/*/support_url.txt` には `https://kotoragk.com/mytapcount` を書いてあるが、**ページはまだ存在しない**）
+- [ ] サポート URL のページを用意する。`https://kotoragk.com/mytapcount` は **404**
+      （プライバシー `https://kotoragk.com/mytapcount/privacy` は 200 で存在する。
+      なお MyGeoWarp 等のリリース済みアプリもサポート URL は 404 のままなので、審査で弾かれるとは限らない）
 - [x] AppIcon を用意する（`Assets.xcassets/AppIcon.appiconset` に 1024 / Dark / Tinted）
-- [x] App Store Connect にアプリ登録（SKU は `mytapcount`）
+- [x] App Store Connect にアプリ登録（**SKU は `MyTapCount`** / Apple ID `6809613034`）
 - [x] git リポジトリの作成と初期コミット（リモート: `git@github.com:keisukearai/ios-my-tap-count.git` / main ブランチ）
