@@ -159,7 +159,13 @@ bundle exec fastlane ios upload_screenshots
 
 ## リリース状況
 
-**1.0 を 2026-09-11 に App Store で公開済み**（Apple ID `6809613034` / SKU `MyTapCount`）。
+**1.0 を 2026-09-11 に審査提出済み。ASC の状態は `WAITING_FOR_REVIEW`（審査待ち）**
+（Apple ID `6809613034` / SKU `MyTapCount`）。公開中バージョンはまだ無い。
+
+**審査待ち中にサポート URL 等のメタデータを直すには、いったん「デベロッパーにより却下」で
+審査から取り下げる必要がある。** 取り下げてもビルドとメタデータは残る（状態が
+`DEVELOPER_REJECTED` になるだけ）ので、直したあと「審査に提出」を押し直せばよく、
+再アーカイブもアップロードも要らない。ただし審査の列には並び直しになる。
 
 ## TODO
 
@@ -170,9 +176,10 @@ bundle exec fastlane ios upload_screenshots
 - [x] スクリーンショットを ASC に上げる（`bundle exec fastlane ios upload_screenshots`）
 - [ ] App プレビュー（動画）は未作成。任意項目なので無くても公開できた
 - [x] Xcode の Organizer から Archive → App Store Connect へアップロード
-- [ ] サポート URL のページを用意する。`https://kotoragk.com/mytapcount` は **404 のまま**。
-      プライバシー `https://kotoragk.com/mytapcount/privacy` は 200。
-      **404 のままで審査は通った**（MyGeoWarp 等の既存アプリと同じ状態）が、ユーザーが踏むと 404 なので直す価値はある
+- [x] サポート URL を ja / en-US とも `https://kotoragk.com/mytapcount/privacy` に揃える（200 確認済み）
+- [ ] サポート専用ページを用意する。今はサポート URL がプライバシーポリシーを指しているので、
+      審査で指摘される可能性が残る。`https://kotoragk.com/<sku小文字>` は実在しない
+      （MyGeoWarp 等の既存アプリも同じ状態）
 - [x] AppIcon を用意する（`Assets.xcassets/AppIcon.appiconset` に 1024 / Dark / Tinted）
 - [x] App Store Connect にアプリ登録（**SKU は `MyTapCount`** / Apple ID `6809613034`）
 - [x] git リポジトリの作成と初期コミット（リモート: `git@github.com:keisukearai/ios-my-tap-count.git` / main ブランチ）
