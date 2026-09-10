@@ -1,0 +1,39 @@
+MyTapCount records how many times you did something today. You just tap the + on a Home Screen widget.
+
+Drank a glass of water. Took your pills. Finished a set of push-ups. Anything you count several times a day, logged without opening the app. Unlock, tap, done.
+
+FEATURES
+
+Count straight from the Home Screen
+Tapping + on the widget increases the count in place. The app never launches, and the number updates right there. What used to be three steps — open the app, find the item, press the button — becomes two: unlock and tap.
+
+Two widget sizes
+The small widget shows one item with a large number and a large + button. The medium widget lists three to four items so you can log several things at once. Touch and hold the widget to choose which item it shows.
+
+Goals and progress
+Give an item a daily goal and it shows as "3 / 8" so you can see what is left. Goals are optional, so items you only want to count can go without one. You can also set how much a single tap adds.
+
+Review your history, fix your mistakes
+Tap an item to see a weekly chart and a list of every entry. Accidentally tapped the widget? Swipe an entry to delete it.
+
+The day rolls over on its own
+Today's count starts again from zero when the date changes. There is nothing to reset.
+
+Icons and colors
+Each item gets an icon and a color, so you can tell them apart at a glance on the Home Screen. The order stays exactly as you arranged it and is never shuffled for you.
+
+GOOD FOR
+
+- Tracking glasses of water
+- Remembering whether you took your medication
+- Adding up push-ups or squats
+- Keeping an eye on cigarettes or snacks
+- Counting anything, with as little effort as possible
+
+PRIVACY
+
+Everything stays on your iPhone. No account, no sign-in, and nothing is sent anywhere. There are no ads and no in-app purchases.
+
+REQUIREMENTS
+
+iPhone running iOS 17 or later. Counting directly from the widget requires iOS 17. Available in English and Japanese.

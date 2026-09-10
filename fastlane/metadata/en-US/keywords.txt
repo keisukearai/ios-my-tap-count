@@ -1,0 +1,1 @@
+counter,widget,tally,count,habit,tracker,water,pills,reps,daily,goal,streak

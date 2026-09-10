@@ -1,0 +1,1 @@
+Tap the + on your Home Screen. The count goes up without ever opening the app.

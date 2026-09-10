@@ -7,3 +7,9 @@ xcuserdata/
 .swiftpm/
 icon-drafts/
 .build/
+
+# fastlane
+fastlane/.env.local
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output/

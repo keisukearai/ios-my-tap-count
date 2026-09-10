@@ -1,0 +1,43 @@
+default_platform(:ios)
+
+platform :ios do
+
+  APP_BUNDLE_ID = "com.keisukearai.MyTapCount"
+
+  def api_key
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_FILEPATH"],
+    )
+  end
+
+  def current_version
+    get_version_number(xcodeproj: "MyTapCount.xcodeproj", target: "MyTapCount")
+  end
+
+  # メタデータ（テキスト）のみアップロード。バイナリ・スクリーンショットは触らない。
+  # バイナリは Xcode の Organizer から手動でアップロードする。
+  lane :upload_metadata do
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: APP_BUNDLE_ID,
+      app_version: current_version,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false,
+      force: true,
+      copyright: "#{Time.now.year} Keisuke Arai",
+      app_review_information: {
+        first_name: "Keisuke",
+        last_name: "Arai",
+        phone_number: ENV["REVIEW_PHONE"],
+        email_address: ENV["REVIEW_EMAIL"],
+        demo_user: "",
+        demo_password: "",
+        notes: "No sign-in is required. All features are available immediately after launch. The main feature is a Home Screen widget: add the MyTapCount widget (small or medium) to the Home Screen and tap the + button to record a count without opening the app. Interactive widgets require iOS 17 or later.",
+      },
+    )
+  end
+
+end

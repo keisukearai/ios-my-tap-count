@@ -101,10 +101,43 @@ xcrun simctl launch booted com.keisukearai.MyTapCount -seedSampleData -screen de
 - このアプリには accessibilityIdentifier を付けていないので、要素はラベル（`カウンターを追加`
   `設定` `キャンセル` `保存` など）で引いている
 
+## App Store 提出（fastlane）
+
+姉妹プロジェクト **MyNfcTapLog と同じ最小構成**。テキストのメタデータだけ fastlane で上げ、
+**バイナリは Xcode の Organizer から手動でアップロードする**（`skip_binary_upload: true`）。
+MyGeoWarp / task-count-down 等にある `beta` / `submit` / `release` レーンは意図的に持たない。
+
+```bash
+bundle install
+cp fastlane/.env.local.example fastlane/.env.local   # 実値を埋める（他プロジェクトの .env.local から流用）
+bundle exec fastlane ios upload_metadata             # ja / en-US のメタデータを ASC へ
+```
+
+- `fastlane/.env.local` は **.gitignore 済み**。App Store Connect API キー等が入るのでコミットしない
+- メタデータの実体は `fastlane/metadata/{ja,en-US}/*.txt`。**ASC の画面で直接直さず、このファイルを直して上げ直す**
+- カテゴリは `fastlane/metadata/primary_category.txt` の `UTILITIES`。
+  pbxproj の `INFOPLIST_KEY_LSApplicationCategoryType` は主に macOS 向けの値で、審査に効くのは前者
+- 文字数上限：name 30 / subtitle 30 / keywords 100 / promotional_text 170 / description 4000
+- スクリーンショットは fastlane で扱わない（`skip_screenshots: true`）。ASC に手で上げる
+
+### 提出まわりで入れてある設定
+
+- `Shared/PrivacyInfo.xcprivacy` — `Localizer` / `AppGroup` が `UserDefaults` を使うため
+  Required Reason API の申告が要る（理由コード `CA92.1` = 自App・同一 App Group 内からのアクセス）。
+  `Shared/` に置くことで **本体と拡張の両バンドルにコピーされる**（ビルド成果物で確認済み）。
+  データ収集・トラッキングはいずれも無しで申告している
+- `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` — アップロードのたびに聞かれる
+  輸出コンプライアンス質問をスキップする。生成 Info.plist に `<false/>` で入ることを確認済み
+
 ## リリース前の TODO
 
 - [ ] 実機（arai13）で small / medium ウィジェットの ＋ 動作を確認する
-- [ ] AppIcon を用意する
-- [ ] App Store Connect にアプリ登録（SKU は `mytapcount`）
-- [ ] サポート URL・プライバシー URL（他プロジェクトは `https://kotoragk.com/<sku>` 形式）
+- [ ] App Store Connect の「App情報」でカテゴリ・年齢制限（4+）・App プライバシー（データを収集しません）を設定する
+- [ ] `fastlane/.env.local` を作って `bundle exec fastlane ios upload_metadata` を実行する
+- [ ] スクリーンショットを撮って ASC に上げる（`-screen` 起動引数と `ScreenshotMode.swift` が使える）
+- [ ] Xcode の Organizer から Archive → App Store Connect へアップロード
+- [ ] サポート URL・プライバシー URL のページを実際に用意する
+      （`fastlane/metadata/*/support_url.txt` には `https://kotoragk.com/mytapcount` を書いてあるが、**ページはまだ存在しない**）
+- [x] AppIcon を用意する（`Assets.xcassets/AppIcon.appiconset` に 1024 / Dark / Tinted）
+- [x] App Store Connect にアプリ登録（SKU は `mytapcount`）
 - [x] git リポジトリの作成と初期コミット（リモート: `git@github.com:keisukearai/ios-my-tap-count.git` / main ブランチ）
