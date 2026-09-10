@@ -66,6 +66,9 @@ struct RootView: View {
             .tint(Theme.accent)
             .interactiveDismissDisabled()
         }
+        // デザインに暗色パレットが無いため、ライト固定で表示する。
+        // 固定色の地に、ダーク時のシステム色（白い文字・沈むアクセント）が載って読めなくなるのを防ぐ。
+        .preferredColorScheme(.light)
     }
 
     #if DEBUG

@@ -1,6 +1,8 @@
 import SwiftUI
 
 /// デザイン（MyTapCount.dc.html）の値をそのまま置いたもの。
+/// デザイン側に暗色パレットが無いため、アプリ本体はライト固定で表示する（RootView で .preferredColorScheme(.light)）。
+/// ウィジェットは systemBackground / .secondary を使っておりダークに追従するので、こちらの固定色は本体だけの話。
 enum Theme {
     static let accent = Color(hex: 0x2F7D4F)
     static let accentDeep = Color(hex: 0x1D5E3B)

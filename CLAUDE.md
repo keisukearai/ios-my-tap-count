@@ -37,6 +37,7 @@ Xcode 26 の **file system synchronized group** 構成。フォルダに置け�
 - **一覧の並び順は自動で変えない**（`sortOrder`）。ウィジェットの表示順とずれると「どれを押したか」が分からなくなる
 - Timeline は現在と**翌 0 時**の2エントリ。0 時のエントリはカウント 0 で作り、OS がリロードしなくても数字が翌日にずれ込まないようにしている
 - 拡張側は当日分の記録しか読まない（メモリ制限が厳しいため）
+- **アプリ本体はライト固定**（`RootView` の `.preferredColorScheme(.light)`）。`Shared/Theme.swift` は固定のライト色だけで、デザイン（dc.html）に暗色パレットが無い。固定しないとダーク時にシステム色の文字（白）が白いカードに載って読めなくなる。ウィジェットは `.containerBackground(.background)` と `.secondary` を使っておりダークに追従するので、こちらは固定しない（MyNfcTapLog と同じ方針）
 
 ## ビルド・実行
 
