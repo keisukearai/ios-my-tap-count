@@ -86,6 +86,20 @@ xcrun simctl launch booted com.keisukearai.MyTapCount -seedSampleData -screen de
   `didOpenRequestedScreen` のガードが無いと「戻ると追加・編集画面が開き直す」「詳細が再 push される」
   という形で出る。デバッグ用の起動引数が原因なので、素の不具合と紛らわしい
 
+## 実機の自動操作（Appium）
+
+`~/workspace/ios/appium-poc/` に実機 arai13 を操作する仕組みがある（このリポジトリの外）。
+手順は同ディレクトリの README.md。要点だけ：
+
+- トンネル（`tunnel.sh` / **sudo・常駐**）と Appium サーバー（`serve.sh` / 常駐）の2プロセスが要る。
+  iOS 18 以降の実機は Remote XPC トンネル必須
+- `node do.mjs dump | tap "ラベル" | type "文字" | swipe up | shot` で1操作ずつ動かせる
+- `node smoke.mjs` で通しテスト（起動→要素取得→タップ→入力→スワイプ→撮影）
+- **端末の AssistiveTouch は OFF にする。** 浮いている丸ボタンがツールバーの ＋ に重なると
+  タップを横取りされ、Appium 側は成功を返すのに画面が変わらない、という形で出る
+- このアプリには accessibilityIdentifier を付けていないので、要素はラベル（`カウンターを追加`
+  `設定` `キャンセル` `保存` など）で引いている
+
 ## リリース前の TODO
 
 - [ ] 実機（arai13）で small / medium ウィジェットの ＋ 動作を確認する

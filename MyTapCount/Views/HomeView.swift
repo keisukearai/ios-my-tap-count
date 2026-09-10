@@ -20,6 +20,16 @@ struct HomeView: View {
     let onOpenSettings: () -> Void
 
     @State private var pendingDeletion: CounterItem?
+    /// 記録直後の取り消し用。＋ を押すたびに積み、5秒で捨てる。
+    /// 記録そのものは SwiftData 側にあるので、ここには表示に要る分だけ持つ。
+    @State private var undoStack: [UndoRecord] = []
+
+    /// 下部の取り消しバーが出す情報。
+    private struct UndoRecord {
+        let counterID: UUID
+        let counterName: String
+        let amount: Int
+    }
 
     private var todayTotals: [UUID: Int] {
         let start = CountingService.startOfDay()
@@ -86,6 +96,57 @@ struct HomeView: View {
         } message: {
             Text(localizer.t("form.deleteNote"))
         }
+        .overlay(alignment: .bottom) { undoBar }
+        // 5秒で引っ込める。id を件数にしているので、＋ を押すたび・取り消すたびに測り直す。
+        .task(id: undoStack.count) {
+            guard !undoStack.isEmpty else { return }
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.2)) { undoStack.removeAll() }
+        }
+    }
+
+    // MARK: - 取り消しバー
+
+    @ViewBuilder
+    private var undoBar: some View {
+        if let last = undoStack.last {
+            // 同じ項目を続けて押したときは、その項目の合計を出す（「+3」のように見える）。
+            let run = undoStack.filter { $0.counterID == last.counterID }.reduce(0) { $0 + $1.amount }
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(last.counterName)  +\(run)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.onToast)
+                        .lineLimit(1)
+                    Text(undoStack.count > 1
+                         ? localizer.t("toast.addedTimes", undoStack.count)
+                         : localizer.t("toast.added"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.onToastSub)
+                }
+                Spacer(minLength: 4)
+                Button {
+                    undoLast()
+                } label: {
+                    Text(localizer.t("common.undo"))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.onToast)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 40)
+                        .background(Theme.toastButton, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 8)
+            .padding(.vertical, 10)
+            .background(Theme.toast, in: RoundedRectangle(cornerRadius: Theme.blockRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.3), radius: 16, y: 14)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 30)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     // MARK: - 行
@@ -132,6 +193,17 @@ struct HomeView: View {
         .padding(.vertical, 6)
         .listRowBackground(progressBackground(ratio: ratio, target: counter.target, tint: counter.color.tint))
         .contextMenu {
+            // ウィジェットの誤タップはここで直す。ウィジェット側には − を置かない方針のため。
+            Button {
+                undoLatest(for: counter)
+            } label: {
+                Label(
+                    lastAmountToday(for: counter).map { localizer.t("menu.undoLast", $0) }
+                        ?? localizer.t("menu.undoNone"),
+                    systemImage: "minus"
+                )
+            }
+            .disabled(today == 0)
             Button {
                 onEdit(counter.id)
             } label: {
@@ -233,6 +305,33 @@ struct HomeView: View {
         context.insert(CountEntry(amount: counter.step, counter: counter))
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
+        withAnimation(.easeOut(duration: 0.2)) {
+            undoStack.append(UndoRecord(counterID: counter.id, counterName: counter.name, amount: counter.step))
+        }
+    }
+
+    /// 下部バーの「取り消す」。直前の1件だけ消し、残りがあればバーは出したままにする。
+    private func undoLast() {
+        guard let last = undoStack.last else { return }
+        _ = try? CountingService.undoLatestToday(counterID: last.counterID, in: context)
+        WidgetCenter.shared.reloadAllTimelines()
+        withAnimation(.easeOut(duration: 0.2)) { _ = undoStack.removeLast() }
+    }
+
+    /// 長押しメニューの「取り消す」。下部バーが消えたあとの受け皿。
+    private func undoLatest(for counter: CounterItem) {
+        _ = try? CountingService.undoLatestToday(counterID: counter.id, in: context)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// 今日の最後の記録の量。メニューの「−1」の数字に使う。
+    /// 一覧のために読んである allEntries から出すので、行ごとに問い合わせない。
+    private func lastAmountToday(for counter: CounterItem) -> Int? {
+        let start = CountingService.startOfDay()
+        return allEntries
+            .filter { $0.timestamp >= start && $0.counter?.id == counter.id }
+            .max { $0.timestamp < $1.timestamp }?
+            .amount
     }
 
     private func move(from source: IndexSet, to destination: Int) {

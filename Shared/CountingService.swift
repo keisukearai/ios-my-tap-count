@@ -123,6 +123,35 @@ enum CountingService {
         }
     }
 
+    /// 今日の記録のうち、その項目の最も新しい1件。無ければ nil。
+    /// 誤タップの取り消しに使う。当日分しか見ないのは、直したいのは「今押したもの」だけで、
+    /// 昨日以前の記録を巻き戻す口をここに作ると誤操作の方が怖いため。
+    static func latestEntryToday(
+        counterID: UUID, in context: ModelContext, now: Date = .now
+    ) throws -> CountEntry? {
+        let start = startOfDay(now)
+        let end = nextMidnight(after: now)
+        var descriptor = FetchDescriptor<CountEntry>(
+            predicate: #Predicate { $0.timestamp >= start && $0.timestamp < end },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        // 当日分は多くても数十件なので、全部読んでから項目で選り分ける。
+        descriptor.fetchLimit = 200
+        return try context.fetch(descriptor).first { $0.counter?.id == counterID }
+    }
+
+    /// 今日の直前の記録を1件取り消す。取り消した量を返す（何も無ければ nil）。
+    @discardableResult
+    static func undoLatestToday(
+        counterID: UUID, in context: ModelContext, now: Date = .now
+    ) throws -> Int? {
+        guard let entry = try latestEntryToday(counterID: counterID, in: context, now: now) else { return nil }
+        let amount = entry.amount
+        context.delete(entry)
+        try context.save()
+        return amount
+    }
+
     /// 1タップ分を記録する。ウィジェットの AppIntent からも呼ぶ。
     @discardableResult
     static func increment(counterID: UUID, in context: ModelContext, now: Date = .now) throws -> Int {

@@ -163,6 +163,66 @@ struct IncrementTests {
     }
 }
 
+@Suite("記録の取り消し")
+struct UndoTests {
+    private let store = TestStore()
+
+    @Test("今日の直前の1件だけを消す")
+    func removesOnlyTheLatestToday() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        try CountingService.increment(counterID: water.id, in: context, now: TestSupport.date(2026, 9, 8, 9, 0))
+        try CountingService.increment(counterID: water.id, in: context, now: TestSupport.date(2026, 9, 8, 11, 0))
+        let now = TestSupport.date(2026, 9, 8, 12, 0)
+
+        let removed = try CountingService.undoLatestToday(counterID: water.id, in: context, now: now)
+
+        #expect(removed == 1)
+        #expect(try CountingService.todayTotals(in: context, now: now)[water.id] == 1)
+        // 残るのは古い方。
+        #expect(water.entries?.first?.timestamp == TestSupport.date(2026, 9, 8, 9, 0))
+    }
+
+    @Test("step が大きい項目はその分まとめて消える")
+    func removesWholeStep() throws {
+        let context = store.context
+        let pushups = TestSupport.makeCounter(in: context, name: "腕立て", step: 10)
+        let now = TestSupport.date(2026, 9, 8, 10, 0)
+        try CountingService.increment(counterID: pushups.id, in: context, now: now)
+
+        #expect(try CountingService.undoLatestToday(counterID: pushups.id, in: context, now: now) == 10)
+        #expect(try CountingService.todayTotals(in: context, now: now)[pushups.id] == nil)
+    }
+
+    @Test("今日の記録が無ければ何も消さない")
+    func keepsOlderDays() throws {
+        let context = store.context
+        let water = TestSupport.makeCounter(in: context)
+        try CountingService.increment(counterID: water.id, in: context, now: TestSupport.date(2026, 9, 7, 22, 0))
+        let now = TestSupport.date(2026, 9, 8, 10, 0)
+
+        #expect(try CountingService.undoLatestToday(counterID: water.id, in: context, now: now) == nil)
+        // 昨日の記録には触らない。
+        #expect(water.entries?.count == 1)
+    }
+
+    @Test("他の項目の記録は消さない")
+    func leavesOtherCountersAlone() throws {
+        let context = store.context
+        let now = TestSupport.date(2026, 9, 8, 10, 0)
+        let water = TestSupport.makeCounter(in: context, name: "水分")
+        let pushups = TestSupport.makeCounter(in: context, name: "腕立て")
+        try CountingService.increment(counterID: water.id, in: context, now: now)
+        try CountingService.increment(counterID: pushups.id, in: context, now: now)
+
+        _ = try CountingService.undoLatestToday(counterID: pushups.id, in: context, now: now)
+
+        let totals = try CountingService.todayTotals(in: context, now: now)
+        #expect(totals[water.id] == 1)
+        #expect(totals[pushups.id] == nil)
+    }
+}
+
 @Suite("週単位の履歴")
 struct WeekHistoryTests {
     private let store = TestStore()

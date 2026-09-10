@@ -16,6 +16,11 @@ enum Theme {
     /// 一覧の行下端に敷く進捗バーの土台と、1回分の目盛り線。
     static let progressTrack = Color(hex: 0x3C3C43, opacity: 0.045)
     static let progressTick = Color(hex: 0x3C3C43, opacity: 0.13)
+    /// 記録直後に下部へ出す取り消しバー。地の色に沈まないよう暗い面で置く。
+    static let toast = Color(hex: 0x16181C, opacity: 0.95)
+    static let onToast = Color.white
+    static let onToastSub = Color.white.opacity(0.72)
+    static let toastButton = Color.white.opacity(0.14)
 
     static let cardRadius: CGFloat = 20
     static let blockRadius: CGFloat = 16
