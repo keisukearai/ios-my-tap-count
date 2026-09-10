@@ -191,7 +191,18 @@ struct HomeView: View {
             PlusButton(color: counter.color.color) { increment(counter) }
         }
         .padding(.vertical, 6)
-        .listRowBackground(progressBackground(ratio: ratio, target: counter.target, tint: counter.color.tint))
+        .listRowBackground(
+            progressBackground(
+                ratio: ratio,
+                target: counter.target,
+                tint: counter.color.tint,
+                showsDivider: showsDivider(above: counter)
+            )
+        )
+        // 標準のセパレータは alignmentGuide で伸ばしても行コンテンツの幅までで、
+        // セル全幅に敷く進捗バーと端が揃わない（前後が切れて見える）。
+        // 隠して、進捗バーと同じ listRowBackground の中に罫線を引く。
+        .listRowSeparator(.hidden)
         .contextMenu {
             // ウィジェットの誤タップはここで直す。ウィジェット側には − を置かない方針のため。
             Button {
@@ -217,12 +228,26 @@ struct HomeView: View {
         }
     }
 
+    /// 行の上端に区切り線を引くか。先頭行と、直前の行が進捗バーを敷いている行では引かない
+    /// （バーが区切りの役目を果たすので、線を重ねると二重に見える）。
+    private func showsDivider(above counter: CounterItem) -> Bool {
+        guard let index = counters.firstIndex(where: { $0.id == counter.id }), index > 0 else { return false }
+        return (counters[index - 1].target ?? 0) <= 0
+    }
+
     /// 目標がある項目は行の下端に進捗バーを敷く。目盛りは1回分の区切りで、
     /// 目標が大きいときは 24 分割で頭打ちにして線が潰れないようにする。
-    private func progressBackground(ratio: Double?, target: Int?, tint: Color) -> some View {
+    /// 行の区切り（`showsDivider`）も、進捗バーと端を揃えるためここで上端に引く。
+    private func progressBackground(ratio: Double?, target: Int?, tint: Color, showsDivider: Bool) -> some View {
         GeometryReader { proxy in
             ZStack(alignment: .bottomLeading) {
                 Theme.card
+                if showsDivider {
+                    Rectangle()
+                        .fill(Theme.hairline)
+                        .frame(height: 0.5)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                }
                 if let ratio, let target, target > 0 {
                     let barHeight = proxy.size.height * 0.15
                     let segments = min(target, 24)
