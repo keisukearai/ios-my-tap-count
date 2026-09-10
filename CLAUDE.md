@@ -127,7 +127,26 @@ bundle exec fastlane ios upload_metadata             # ja / en-US のメタデ�
 - カテゴリは `fastlane/metadata/primary_category.txt` の `UTILITIES`。
   pbxproj の `INFOPLIST_KEY_LSApplicationCategoryType` は主に macOS 向けの値で、審査に効くのは前者
 - 文字数上限：name 30 / subtitle 30 / keywords 100 / promotional_text 170 / description 4000
-- スクリーンショットは fastlane で扱わない（`skip_screenshots: true`）。ASC に手で上げる
+- スクリーンショットは `upload_metadata` では触らない（`skip_screenshots: true`）。
+  **撮影は `./fastlane/capture_screenshots.sh`、アップロードは `bundle exec fastlane ios upload_screenshots`** と分けてある
+
+### スクリーンショットの撮り方
+
+```bash
+./fastlane/capture_screenshots.sh                       # fastlane/screenshots/{ja,en-US}/ に 5 枚ずつ
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+bundle exec fastlane ios upload_screenshots
+```
+
+- 機種は **iPhone 14 Plus（1284 x 2778）**。App Store の 6.5 インチ枠がそのまま受け付けるサイズ。
+  1242 x 2688（iPhone 11 Pro Max）でも可
+- 言語は **`-AppleLanguages` 起動引数**で切り替える。`Localizer` は保存値が無いとき
+  `Locale.preferredLanguages` を見る（`AppLanguage.systemDefault`）ので、設定画面を操作せずに撮り分けられる。
+  **`SampleData` の項目名も同じ判定で ja / en が切り替わる**（英語版に「水」「腕立て」が出ないようにするため）
+- **DEBUG ビルドで撮る。** `SampleData` と `ScreenshotMode` が DEBUG のみのため
+- 撮る画面は ホーム / 詳細 / 追加 / ウィジェット設置ガイド / 設定 の5枚。
+  設定画面は情報が薄いので、ストアに載せるのは上4枚で足りる
+- 時計を 9:41 に固定するため `simctl status_bar override` をかけている
 
 ### 提出まわりで入れてある設定
 
@@ -138,16 +157,22 @@ bundle exec fastlane ios upload_metadata             # ja / en-US のメタデ�
 - `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` — アップロードのたびに聞かれる
   輸出コンプライアンス質問をスキップする。生成 Info.plist に `<false/>` で入ることを確認済み
 
-## リリース前の TODO
+## リリース状況
+
+**1.0 を 2026-09-11 に App Store で公開済み**（Apple ID `6809613034` / SKU `MyTapCount`）。
+
+## TODO
 
 - [ ] 実機（arai13）で small / medium ウィジェットの ＋ 動作を確認する
 - [ ] App Store Connect の「App情報」でカテゴリ・年齢制限（4+）・App プライバシー（データを収集しません）を設定する
 - [x] `fastlane/.env.local` を作って `bundle exec fastlane ios upload_metadata` を実行する（2026-09-11 実施・ASC 反映確認済み）
-- [ ] スクリーンショットを撮って ASC に上げる（`-screen` 起動引数と `ScreenshotMode.swift` が使える）
-- [ ] Xcode の Organizer から Archive → App Store Connect へアップロード
-- [ ] サポート URL のページを用意する。`https://kotoragk.com/mytapcount` は **404**
-      （プライバシー `https://kotoragk.com/mytapcount/privacy` は 200 で存在する。
-      なお MyGeoWarp 等のリリース済みアプリもサポート URL は 404 のままなので、審査で弾かれるとは限らない）
+- [x] スクリーンショットを撮る（`./fastlane/capture_screenshots.sh` / 1284 x 2778 / ja・en 各5枚）
+- [x] スクリーンショットを ASC に上げる（`bundle exec fastlane ios upload_screenshots`）
+- [ ] App プレビュー（動画）は未作成。任意項目なので無くても公開できた
+- [x] Xcode の Organizer から Archive → App Store Connect へアップロード
+- [ ] サポート URL のページを用意する。`https://kotoragk.com/mytapcount` は **404 のまま**。
+      プライバシー `https://kotoragk.com/mytapcount/privacy` は 200。
+      **404 のままで審査は通った**（MyGeoWarp 等の既存アプリと同じ状態）が、ユーザーが踏むと 404 なので直す価値はある
 - [x] AppIcon を用意する（`Assets.xcassets/AppIcon.appiconset` に 1024 / Dark / Tinted）
 - [x] App Store Connect にアプリ登録（**SKU は `MyTapCount`** / Apple ID `6809613034`）
 - [x] git リポジトリの作成と初期コミット（リモート: `git@github.com:keisukearai/ios-my-tap-count.git` / main ブランチ）

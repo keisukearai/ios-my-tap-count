@@ -15,18 +15,25 @@ enum SampleData {
         try? context.delete(model: CountEntry.self)
         try? context.delete(model: CounterItem.self)
 
-        let specs: [(String, String, CounterColor, Int, Int?, [Int])] = [
-            ("水", "drop.fill", .blue, 1, 8, [7, 6, 8, 5, 8, 7, 3]),
-            ("腕立て", "dumbbell.fill", .orange, 10, nil, [20, 0, 30, 20, 0, 20, 20]),
-            ("薬", "pills.fill", .green, 1, 2, [2, 1, 2, 2, 0, 2, 1]),
-            ("ストレッチ", "figure.walk", .purple, 1, 1, [1, 1, 0, 1, 1, 0, 0]),
+        // 項目名は表示言語に合わせる。App Store のスクリーンショットを ja / en の
+        // 両方で撮るため、英語表示のまま日本語の項目名が並ばないようにする。
+        let names: [String] = switch Localizer().language {
+        case .ja: ["水", "腕立て", "薬", "ストレッチ"]
+        case .en: ["Water", "Push-ups", "Medication", "Stretching"]
+        }
+
+        let specs: [(String, CounterColor, Int, Int?, [Int])] = [
+            ("drop.fill", .blue, 1, 8, [7, 6, 8, 5, 8, 7, 3]),
+            ("dumbbell.fill", .orange, 10, nil, [20, 0, 30, 20, 0, 20, 20]),
+            ("pills.fill", .green, 1, 2, [2, 1, 2, 2, 0, 2, 1]),
+            ("figure.walk", .purple, 1, 1, [1, 1, 0, 1, 1, 0, 0]),
         ]
         let today = CountingService.startOfDay()
 
         for (index, spec) in specs.enumerated() {
-            let (name, symbol, color, step, target, week) = spec
+            let (symbol, color, step, target, week) = spec
             let counter = CounterItem(
-                name: name, symbol: symbol, colorKey: color.rawValue,
+                name: names[index], symbol: symbol, colorKey: color.rawValue,
                 step: step, target: target, sortOrder: index
             )
             context.insert(counter)
@@ -41,8 +48,9 @@ enum SampleData {
         }
         // 週送りを試せるよう、間を空けて古い週にも「水」の記録を置く。
         // 直近7日ぶんだけだと ◀ が常に無効で、空週スキップの確認ができない。
+        let waterName = names[0]
         if let water = try? context.fetch(
-            FetchDescriptor<CounterItem>(predicate: #Predicate { $0.name == "水" })
+            FetchDescriptor<CounterItem>(predicate: #Predicate { $0.name == waterName })
         ).first {
             for dayOffset in [-16, -17, -18, -30, -31] {
                 let day = Calendar.current.date(byAdding: .day, value: dayOffset, to: today) ?? today

@@ -40,4 +40,19 @@ platform :ios do
     )
   end
 
+  # スクリーンショットのみアップロード。撮影は fastlane/capture_screenshots.sh。
+  lane :upload_screenshots do
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: APP_BUNDLE_ID,
+      app_version: current_version,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      run_precheck_before_submit: false,
+      force: true,
+    )
+  end
+
 end
